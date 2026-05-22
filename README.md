@@ -1,172 +1,149 @@
-# SyncMemoBot
+<p align="center">
+  <img src="assets/syncmemo-avatar.png" alt="SyncMemo" width="180"/>
+</p>
 
-Bot de Discord para lembretes — pessoais (DM) e em canais — com processamento de linguagem natural em PT / EN / ES e fuso horário configurável.
+<h1 align="center">SyncMemoBot</h1>
 
-## Stack
+<p align="center">
+  <em>Set it. Forget it. The bot remembers.</em>
+</p>
 
-- **.NET 8** (Web App + `IHostedService`)
-- **Discord.Net 3.x** — slash commands via `Interactions`
-- **Hangfire** + `Hangfire.Storage.SQLite` — agendamento persistente local
-- **Microsoft.Recognizers.Text.DateTime** — parsing multilíngue de tempo
-- **Serilog** — logs estruturados (console + arquivo rotativo)
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet" alt=".NET 8"/>
+  <img src="https://img.shields.io/badge/Discord.Net-3.19-5865F2?logo=discord" alt="Discord.Net"/>
+  <img src="https://img.shields.io/badge/Hangfire-1.8.23-EE6F22" alt="Hangfire"/>
+  <img src="https://img.shields.io/badge/Tests-10%20passing-2EAD33" alt="Tests"/>
+</p>
 
-## Pré-requisitos
+---
 
-- .NET 8 SDK (a solution força `net8.0` mesmo se o SDK default for mais novo)
-- Conta no [Discord Developer Portal](https://discord.com/developers/applications)
+## See it in action
 
-## Setup
-
-### 1. Criar o bot no Discord
-
-1. Acesse o Developer Portal → **New Application** → nomeie como SyncMemo
-2. Aba **Bot** → **Reset Token** → copie (não compartilhe nem commite)
-3. Aba **OAuth2** → URL Generator:
-   - Scopes: `bot`, `applications.commands`
-   - Bot Permissions: `Send Messages`
-   - Use a URL gerada para adicionar o bot ao seu servidor
-
-### 2. Configurar token e (opcionalmente) guild de dev
-
-```powershell
-cd src\SyncMemoBot.Discord
-dotnet user-secrets init
-dotnet user-secrets set "Discord:Token" "<SEU_TOKEN>"
-
-# Opcional — registra slash commands instantaneamente no seu guild de teste
-# (sem isso, o registro é global e pode levar até 1 hora pra propagar)
-dotnet user-secrets set "Discord:DevGuildId" "<ID_DO_SEU_SERVIDOR>"
+You type:
+```
+/remind  time: in 2 hours  message: pick up the laundry
 ```
 
-Em produção, prefira variáveis de ambiente: `Discord__Token=...`, `Discord__DevGuildId=...`.
+Bot replies (only you can see):
+> **SyncMemo** · only you can see this
+> Got it. I'll DM you at **17:42 (UTC-3)**.
 
-### 3. Rodar
+Two hours later, in your DMs:
+> **SyncMemo** · today at 17:42
+> Reminder: pick up the laundry
 
-```powershell
-dotnet run --project src\SyncMemoBot.Discord
+Want everyone in the group to know? Same thing, but in a channel:
+```
+/remindchannel  channel: #plans  time: amanhã às 20:00  message: movie night
 ```
 
-- Bot conecta no Discord, registra `/remind` e `/remindchannel`
-- Dashboard Hangfire em `https://localhost:7204/hangfire`
-- Logs em `src\SyncMemoBot.Discord\logs\bot-<data>.log`
+At 8 PM tomorrow, `#plans` gets pinged. Nobody forgets. The night happens.
 
-> Sem token configurado, o app sobe em modo "dashboard only" e loga um warning — útil pra inspecionar a UI do Hangfire sem precisar conectar no Discord.
+## Why this exists
 
-## Comandos
+Group chats drift. People schedule things in messages that scroll away in five minutes. Somebody has to be the one who remembers. That somebody is now a small .NET process running in the background.
 
-### `/remind`
-Lembrete pessoal — entregue via DM.
+## It speaks your language
 
-| Parâmetro | Descrição |
-|---|---|
-| `time` | Texto livre. Ex: "em 2 horas", "amanhã às 15:00", "tomorrow at 3pm" |
-| `message` | O que lembrar |
+The parser tries your Discord locale first, then falls back through Portuguese, English, Spanish.
 
-### `/remindchannel`
-Lembrete público em um canal de texto.
-
-| Parâmetro | Descrição |
-|---|---|
-| `channel` | Canal de texto alvo (você precisa de permissão `Send Messages` nele) |
-| `time` | Idem `/remind` |
-| `message` | Idem `/remind` |
-
-Ambos respondem **efêmero** (só você vê) com confirmação ou erro, em menos de 3 segundos.
-
-## Formatos de tempo suportados
-
-O parser tenta primeiro o idioma do app do usuário (`UserLocale`). Se não reconhecer, tenta PT, depois ES. Locales fora de PT/EN/ES caem em EN como primário.
-
-| Português | Inglês | Espanhol |
+| You write... | In | And the bot reads... |
 |---|---|---|
-| em 2 horas | in 2 hours | en 2 horas |
-| amanhã às 15:00 | tomorrow at 3pm | mañana a las 15:00 |
-| amanhã às 3 da tarde | tomorrow at 15:00 | mañana a las 3 de la tarde |
-| amanhã às 15 horas | next monday | pasado mañana |
-| depois de amanhã | in 30 minutes | en 30 minutos |
+| `in 2 hours` | EN | 2 hours from now |
+| `tomorrow at 3pm` | EN | tomorrow, 15:00 |
+| `next monday` | EN | upcoming Monday, 09:00 |
+| `amanhã às 15:00` | PT | tomorrow, 15:00 |
+| `daqui a 30 minutos` | PT | 30 minutes from now |
+| `depois de amanhã` | PT | day after tomorrow, 09:00 |
+| `mañana a las 3 de la tarde` | ES | tomorrow, 15:00 |
+| `en 2 horas` | ES | 2 hours from now |
+| `pasado mañana` | ES | day after tomorrow, 09:00 |
 
-**Atenção**: use `15:00` (com dois-pontos) ou `15 horas`. **Não use `15h`** — o recognizer interpreta `15h` como duração de 15 horas, não como horário do dia.
+> **Gotcha:** type `15:00` or `15 horas`. Do not write `15h`. The parser sees `15h` as a duration of 15 hours, not as 3 PM.
 
-## Configuração
+## Get it running in 3 steps
 
-`src\SyncMemoBot.Discord\appsettings.json`:
+**1. Make the bot in Discord.** Go to the [Developer Portal](https://discord.com/developers/applications), create a new application called `SyncMemo`. Open the **Bot** tab, hit `Reset Token`, copy it.
 
+**2. Add the bot to your server.** Go to **OAuth2 → URL Generator**. Check `bot` and `applications.commands` under scopes, then `Send Messages` and `View Channels` under bot permissions. Copy the generated URL, open in a browser, pick the server, click `Authorize`.
+
+**3. Run it locally.**
+```powershell
+git clone https://github.com/azevedo1x/syncmemobot.git
+cd syncmemobot\src\SyncMemoBot.Discord
+dotnet user-secrets set "Discord:Token" "<YOUR_TOKEN>"
+dotnet run
+```
+
+The bot connects, registers `/remind` and `/remindchannel`, and exposes the Hangfire dashboard at `https://localhost:7204/hangfire`.
+
+> No token configured? The app still boots in "dashboard only" mode, so you can poke at the Hangfire UI without a real bot.
+
+## What it's made of
+
+Three projects, dependencies flow one way: `Discord → Infrastructure → Core`.
+
+| Project | Does what |
+|---|---|
+| [`SyncMemoBot.Core`](src/SyncMemoBot.Core) | Pure domain. Interfaces, sum types (`ReminderTarget`, `TimeParseResult`), options. Zero external deps. |
+| [`SyncMemoBot.Infrastructure`](src/SyncMemoBot.Infrastructure) | The multilingual parser, the Hangfire scheduler, the localized strings, the DI extension. |
+| [`SyncMemoBot.Discord`](src/SyncMemoBot.Discord) | Web host. Slash command modules, dispatcher, lifecycle, Hangfire dashboard. |
+
+| Piece | Why it's here |
+|---|---|
+| `Discord.Net 3.19` | Gateway connection and slash commands |
+| `Hangfire.Storage.SQLite` | Schedules survive restarts, no external DB needed |
+| `Microsoft.Recognizers 1.8.13` | Natural language time parsing across PT, EN, ES |
+| `Serilog` | Rolling daily log files in `logs/bot-<date>.log` |
+| `WebApplication` (Minimal APIs) | Hosts the Hangfire dashboard at `/hangfire` |
+
+Deeper architectural notes (decisions not to reverse, MS Recognizers quirks, conventions) live in [`CLAUDE.md`](CLAUDE.md).
+
+## Tweak the config
+
+`appsettings.json`:
 ```json
 {
-  "Discord": {
-    "Token": "",
-    "DevGuildId": null
-  },
-  "Reminder": {
-    "TimeZone": "America/Sao_Paulo"
-  },
-  "ConnectionStrings": {
-    "Hangfire": "Data Source=hangfire.db"
-  }
+  "Discord": { "Token": "", "DevGuildId": null },
+  "Reminder": { "TimeZone": "America/Sao_Paulo" }
 }
 ```
 
-Trocar o fuso horário (ex: rodar em Lisboa):
-```json
-"Reminder": { "TimeZone": "Europe/Lisbon" }
+Running it from Lisbon? `"TimeZone": "Europe/Lisbon"`. Any IANA zone works.
+
+Want slash commands to register instantly on a single test server (instead of waiting up to an hour for global propagation)?
+```powershell
+dotnet user-secrets set "Discord:DevGuildId" "<YOUR_GUILD_ID>"
 ```
 
-## Arquitetura
+In production, prefer env vars: `Discord__Token`, `Discord__DevGuildId`.
 
-Clean Architecture pragmática, 3 projetos:
+## What it does not do yet
 
-```
-src/
-├── SyncMemoBot.Core/             # Domínio puro — só BCL
-│   ├── Reminders/                # ReminderTarget (sum type), ScheduledReminder
-│   ├── Time/                     # IClock, IReminderTimeZone, ITimeParsingService, TimeParseResult
-│   ├── Scheduling/               # IReminderScheduler
-│   ├── Dispatch/                 # IReminderDispatcher
-│   ├── Localization/             # ILocalizedMessages
-│   └── Options/                  # ReminderOptions
-├── SyncMemoBot.Infrastructure/   # Implementações
-│   ├── Time/                     # MultilingualTimeParser + clock/timezone/locale-mapper
-│   ├── Scheduling/               # HangfireReminderScheduler + HangfireJobInvoker
-│   ├── Localization/             # LocalizedMessages (strings hardcoded PT/EN/ES)
-│   └── ServiceCollectionExtensions.cs   # AddSyncMemoBotInfrastructure
-└── SyncMemoBot.Discord/          # Host (Web App + BackgroundService)
-    ├── Program.cs                # Composition root
-    ├── DiscordClientHost.cs      # Lifecycle do DiscordSocketClient
-    ├── Modules/                  # /remind, /remindchannel
-    └── Dispatch/                 # DiscordReminderDispatcher
-```
+| Limit | Why |
+|---|---|
+| Single instance only | SQLite Hangfire storage cannot handle concurrent writers |
+| No `/cancel` | Scheduled reminders will fire, no way to undo from Discord (yet) |
+| One-shot only | No recurrence, no cron-like schedules |
+| Dashboard is open | No auth on `/hangfire`. Do not expose to the public internet |
+| `15h` is a duration | Use `15:00` or `15 horas`. Already in the gotcha box above |
 
-Dependências fluem em um sentido: `Discord → Infrastructure → Core`. Core não depende de nada externo.
+## Roadmap
 
-## Testes
+`/cancel <id>` · recurring reminders · snooze · edit existing reminder · share with another user · reminder templates · multi-instance (requires swapping Hangfire storage) · authenticated dashboard.
+
+## Tests
 
 ```powershell
 dotnet test
 ```
 
-10 testes em `tests\SyncMemoBot.Tests` focados no parser multilíngue: PT/EN/ES, fallback de idioma, locale não suportado, horário no passado, input lixo, input vazio.
+10 scenarios on the multilingual parser: PT, EN, ES, locale fallback, unsupported locale, past time, garbage input, empty input. All pass, zero warnings.
 
-## Limitações conhecidas (MVP)
+---
 
-- **Single-instance**: `Hangfire.Storage.SQLite` não tolera múltiplos writers. Escala horizontal exige troca para Postgres/Redis (a abstração `IReminderScheduler` isola essa decisão do Core).
-- **Sem cancelamento por comando**: lembrete agendado vai disparar.
-- **Sem persistência própria** do `Reminder`: o payload vive nos argumentos do job Hangfire.
-- **Sem recorrência**: só lembretes pontuais.
-- **Dashboard Hangfire sem autenticação**: em produção, configure `UseHangfireDashboard("/hangfire", new DashboardOptions { Authorization = ... })`.
-- **Formato `15h` não funciona** como horário do dia (ver Formatos de tempo).
-
-## Estrutura de arquivos relevantes
-
-```
-SyncMemoBot/
-├── SyncMemoBot.slnx              # Solution XML (.NET SDK 10 default)
-├── README.md                     # Este arquivo
-├── CLAUDE.md                     # Guia para sessões do Claude Code
-├── .gitignore
-├── src/
-└── tests/
-```
-
-## Licença
-
-Projeto pessoal sem licença explícita. Use sob sua responsabilidade.
+<p align="center">
+  <sub>Built for friends who keep saying "I forgot."</sub>
+  <br/>
+  <sub>Made with .NET and a healthy distrust of human memory.</sub>
+</p>
