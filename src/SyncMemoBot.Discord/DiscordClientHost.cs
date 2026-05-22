@@ -1,0 +1,109 @@
+using Discord;
+using Discord.Interactions;
+using Discord.WebSocket;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using SyncMemoBot.Discord.Modules;
+using SyncMemoBot.Infrastructure.Time;
+
+namespace SyncMemoBot.Discord;
+
+public sealed class DiscordClientHost : IHostedService
+{
+    private readonly DiscordSocketClient _client;
+    private readonly InteractionService _interactions;
+    private readonly IServiceProvider _services;
+    private readonly IOptions<DiscordOptions> _options;
+    private readonly ILogger<DiscordClientHost> _logger;
+
+    public DiscordClientHost(
+        DiscordSocketClient client,
+        InteractionService interactions,
+        IServiceProvider services,
+        IOptions<DiscordOptions> options,
+        ILogger<DiscordClientHost> logger)
+    {
+        _client = client;
+        _interactions = interactions;
+        _services = services;
+        _options = options;
+        _logger = logger;
+    }
+
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        MultilingualTimeParser.WarmUp();
+
+        var token = _options.Value.Token;
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            _logger.LogWarning("Discord:Token is not configured — bot will NOT connect. Set via user-secrets in dev or DISCORD__TOKEN env var in prod.");
+            return;
+        }
+
+        _client.Log += ForwardLog;
+        _interactions.Log += ForwardLog;
+        _client.Ready += OnReadyAsync;
+        _client.InteractionCreated += OnInteractionCreatedAsync;
+
+        await _interactions.AddModulesAsync(typeof(ReminderCommandsModule).Assembly, _services);
+
+        await _client.LoginAsync(TokenType.Bot, token);
+        await _client.StartAsync();
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_client.LoginState == LoginState.LoggedIn)
+        {
+            await _client.LogoutAsync();
+            await _client.StopAsync();
+        }
+    }
+
+    private async Task OnReadyAsync()
+    {
+        try
+        {
+            if (_options.Value.DevGuildId is { } guildId && guildId != 0)
+            {
+                await _interactions.RegisterCommandsToGuildAsync(guildId, deleteMissing: true);
+                _logger.LogInformation("Registered slash commands to guild {GuildId}", guildId);
+            }
+            else
+            {
+                await _interactions.RegisterCommandsGloballyAsync(deleteMissing: true);
+                _logger.LogInformation("Registered slash commands globally (may take up to 1 hour to propagate)");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to register slash commands");
+        }
+    }
+
+    private async Task OnInteractionCreatedAsync(SocketInteraction interaction)
+    {
+        var context = new SocketInteractionContext(_client, interaction);
+        var result = await _interactions.ExecuteCommandAsync(context, _services);
+        if (!result.IsSuccess)
+            _logger.LogWarning("Interaction failed: {Error} — {ErrorReason}", result.Error, result.ErrorReason);
+    }
+
+    private Task ForwardLog(LogMessage msg)
+    {
+        var level = msg.Severity switch
+        {
+            LogSeverity.Critical => LogLevel.Critical,
+            LogSeverity.Error    => LogLevel.Error,
+            LogSeverity.Warning  => LogLevel.Warning,
+            LogSeverity.Info     => LogLevel.Information,
+            LogSeverity.Verbose  => LogLevel.Debug,
+            LogSeverity.Debug    => LogLevel.Trace,
+            _                    => LogLevel.Information
+        };
+        _logger.Log(level, msg.Exception, "[{Source}] {Message}", msg.Source, msg.Message);
+        return Task.CompletedTask;
+    }
+}

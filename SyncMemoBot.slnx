@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SyncMemoBot.Core/SyncMemoBot.Core.csproj" />
+    <Project Path="src/SyncMemoBot.Discord/SyncMemoBot.Discord.csproj" />
+    <Project Path="src/SyncMemoBot.Infrastructure/SyncMemoBot.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SyncMemoBot.Tests/SyncMemoBot.Tests.csproj" />
+  </Folder>
+</Solution>
