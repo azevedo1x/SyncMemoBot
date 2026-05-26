@@ -56,7 +56,7 @@ The parser reads your Discord locale and tries that language first (Portuguese o
 | `daqui a 30 minutos` | PT | 30 minutes from now |
 | `depois de amanhã` | PT | day after tomorrow, 09:00 |
 
-> **Gotcha:** type `15:00` or `15 horas`. Do not write `15h`. The parser sees `15h` as a duration of 15 hours, not as 3 PM.
+> **Gotcha:** `15h`, `15:00`, and `15 horas` all parse to 15:00 and work fine. The traps are `em 15h` / `in 15h` (read as "+15 hours from now", not 15:00) and `15hs` with a trailing `s` (read as a duration). When in doubt, write the time explicitly: `15:00`.
 
 ## Get it running in 3 steps
 
@@ -123,7 +123,6 @@ In production, prefer env vars: `Discord__Token`, `Discord__DevGuildId`.
 | No `/cancel` | Scheduled reminders will fire, no way to undo from Discord (yet) |
 | One-shot only | No recurrence, no cron-like schedules |
 | Dashboard is open | No auth on `/hangfire`. Do not expose to the public internet |
-| `15h` is a duration | Use `15:00` or `15 horas`. Already in the gotcha box above |
 
 ## Roadmap
 

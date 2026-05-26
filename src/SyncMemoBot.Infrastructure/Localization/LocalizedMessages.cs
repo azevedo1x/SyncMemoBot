@@ -10,8 +10,8 @@ public sealed class LocalizedMessages(IReminderTimeZone timeZone) : ILocalizedMe
 
     public string TimeParseError(string? userLocale) => LanguageDetection.FromLocale(userLocale) switch
     {
-        SupportedLanguage.Portuguese => "Não consegui entender o horário. Tente: 'em 2 horas', 'amanhã às 15:00' ou 'amanhã às 3 da tarde'.",
-        _                            => "Couldn't parse that time. Try: 'in 2 hours' or 'tomorrow at 3pm'."
+        SupportedLanguage.Portuguese => "Não consegui entender o horário. Tente: 'em 2 horas', 'amanhã às 15:00', '15:00' ou 'amanhã às 3 da tarde'.",
+        _                            => "Couldn't parse that time. Try: 'in 2 hours', 'tomorrow at 3pm', or '15:00'."
     };
 
     public string PastTimeError(string? userLocale) => LanguageDetection.FromLocale(userLocale) switch
