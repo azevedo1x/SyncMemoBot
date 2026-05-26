@@ -4,12 +4,7 @@ using SyncMemoBot.Core.Time;
 
 namespace SyncMemoBot.Infrastructure.Time;
 
-public sealed class ConfiguredReminderTimeZone : IReminderTimeZone
+public sealed class ConfiguredReminderTimeZone(IOptions<ReminderOptions> options) : IReminderTimeZone
 {
-    public TimeZoneInfo Zone { get; }
-
-    public ConfiguredReminderTimeZone(IOptions<ReminderOptions> options)
-    {
-        Zone = TimeZoneInfo.FindSystemTimeZoneById(options.Value.TimeZone);
-    }
+    public TimeZoneInfo Zone { get; } = TimeZoneInfo.FindSystemTimeZoneById(options.Value.TimeZone);
 }

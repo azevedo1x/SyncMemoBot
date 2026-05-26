@@ -481,5 +481,10 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
+# Hangfire SQLite storage
+hangfire.db
+hangfire.db-shm
+hangfire.db-wal
+
 # Claude Related Files
 CLAUDE.md

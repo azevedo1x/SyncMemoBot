@@ -11,20 +11,16 @@ public sealed class HangfireReminderScheduler : IReminderScheduler
     public HangfireReminderScheduler(IBackgroundJobClient client)
         => _client = client;
 
-    public string Schedule(ScheduledReminder reminder)
+    // Hangfire's DateTimeOffset overload enqueues immediately if the instant is already
+    // past, so no manual delay/clamp is needed here.
+    public string Schedule(ScheduledReminder reminder) => reminder.Target switch
     {
-        var delay = reminder.ScheduledAtUtc - DateTimeOffset.UtcNow;
-        if (delay < TimeSpan.Zero) delay = TimeSpan.Zero;
-
-        return reminder.Target switch
-        {
-            ReminderTarget.Direct d => _client.Schedule<HangfireJobInvoker>(
-                j => j.DispatchDirectAsync(d.UserId, reminder.Message, CancellationToken.None),
-                delay),
-            ReminderTarget.Channel c => _client.Schedule<HangfireJobInvoker>(
-                j => j.DispatchChannelAsync(c.ChannelId, c.CreatedByUserId, reminder.Message, CancellationToken.None),
-                delay),
-            _ => throw new InvalidOperationException($"Unknown ReminderTarget: {reminder.Target.GetType().Name}")
-        };
-    }
+        ReminderTarget.Direct d => _client.Schedule<HangfireJobInvoker>(
+            j => j.DispatchDirectAsync(d.UserId, reminder.Message, CancellationToken.None),
+            reminder.ScheduledAtUtc),
+        ReminderTarget.Channel c => _client.Schedule<HangfireJobInvoker>(
+            j => j.DispatchChannelAsync(c.ChannelId, c.CreatedByUserId, reminder.Message, CancellationToken.None),
+            reminder.ScheduledAtUtc),
+        _ => throw new InvalidOperationException($"Unknown ReminderTarget: {reminder.Target.GetType().Name}")
+    };
 }

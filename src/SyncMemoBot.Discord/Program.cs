@@ -22,7 +22,7 @@ builder.Services
     .Configure<DiscordOptions>(builder.Configuration.GetSection(DiscordOptions.SectionName));
 
 builder.Services.AddSyncMemoBotInfrastructure(
-    builder.Configuration.GetConnectionString("Hangfire") ?? "Data Source=hangfire.db");
+    builder.Configuration.GetConnectionString("Hangfire") ?? "hangfire.db");
 
 builder.Services.AddSingleton(new DiscordSocketConfig
 {
@@ -32,6 +32,7 @@ builder.Services.AddSingleton(new DiscordSocketConfig
 builder.Services.AddSingleton<DiscordSocketClient>();
 builder.Services.AddSingleton(sp =>
     new InteractionService(sp.GetRequiredService<DiscordSocketClient>()));
+builder.Services.AddSingleton<DiscordReadinessSignal>();
 builder.Services.AddSingleton<IReminderDispatcher, DiscordReminderDispatcher>();
 builder.Services.AddHostedService<DiscordClientHost>();
 

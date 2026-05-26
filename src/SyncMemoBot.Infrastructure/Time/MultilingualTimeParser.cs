@@ -1,42 +1,38 @@
 using System.Globalization;
 using Microsoft.Recognizers.Text;
+using SyncMemoBot.Core.Localization;
 using SyncMemoBot.Core.Time;
 using MsRecognizers = Microsoft.Recognizers.Text.DateTime;
 
 namespace SyncMemoBot.Infrastructure.Time;
 
-public sealed class MultilingualTimeParser : ITimeParsingService
+public sealed class MultilingualTimeParser(IClock clock, IReminderTimeZone timeZone) : ITimeParsingService
 {
-    private static readonly string[] FullChain =
-    {
-        Culture.English,
-        Culture.Portuguese,
-        Culture.Spanish
-    };
+    /// <summary>
+    /// Fallback chains preallocated to avoid an allocation per Parse call. The user's
+    /// primary language is tried first; the other covers cross-locale input (e.g. a PT
+    /// phrase typed by a user whose Discord locale is en-US).
+    /// </summary>
+    private static readonly SupportedLanguage[] EnglishFirst = [SupportedLanguage.English, SupportedLanguage.Portuguese];
+    private static readonly SupportedLanguage[] PortugueseFirst = [SupportedLanguage.Portuguese, SupportedLanguage.English];
 
     private static readonly TimeSpan DefaultTimeForDateOnly = new(9, 0, 0);
     private static readonly TimeSpan PastTolerance = TimeSpan.FromSeconds(30);
 
-    private readonly IClock _clock;
-    private readonly IReminderTimeZone _timeZone;
-
-    public MultilingualTimeParser(IClock clock, IReminderTimeZone timeZone)
-    {
-        _clock = clock;
-        _timeZone = timeZone;
-    }
+    private readonly IClock _clock = clock;
+    private readonly IReminderTimeZone _timeZone = timeZone;
 
     public TimeParseResult Parse(string input, string? userLocale)
     {
         if (string.IsNullOrWhiteSpace(input))
             return new TimeParseResult.Failure(TimeParseFailureReason.NoDateTimeFound);
 
-        var primary = DiscordLocaleMapper.ToRecognizersCulture(userLocale);
         var nowInZone = TimeZoneInfo.ConvertTimeFromUtc(_clock.UtcNow.UtcDateTime, _timeZone.Zone);
         var anyParsedButPast = false;
 
-        foreach (var culture in OrderedChain(primary))
+        foreach (var language in OrderedChain(LanguageDetection.FromLocale(userLocale)))
         {
+            var culture = ToRecognizersCulture(language);
             var candidates = ExtractCandidates(input, culture, nowInZone);
             if (candidates.Count == 0) continue;
 
@@ -63,15 +59,13 @@ public sealed class MultilingualTimeParser : ITimeParsingService
         var refTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Unspecified);
         _ = MsRecognizers.DateTimeRecognizer.RecognizeDateTime("tomorrow 8pm", Culture.English, refTime: refTime);
         _ = MsRecognizers.DateTimeRecognizer.RecognizeDateTime("amanhã às 15:00", Culture.Portuguese, refTime: refTime);
-        _ = MsRecognizers.DateTimeRecognizer.RecognizeDateTime("mañana a las 15:00", Culture.Spanish, refTime: refTime);
     }
 
-    private static IEnumerable<string> OrderedChain(string primary)
-    {
-        yield return primary;
-        foreach (var c in FullChain)
-            if (c != primary) yield return c;
-    }
+    private static SupportedLanguage[] OrderedChain(SupportedLanguage primary) =>
+        primary == SupportedLanguage.Portuguese ? PortugueseFirst : EnglishFirst;
+
+    private static string ToRecognizersCulture(SupportedLanguage language) =>
+        language == SupportedLanguage.Portuguese ? Culture.Portuguese : Culture.English;
 
     private static List<DateTime> ExtractCandidates(string input, string culture, DateTime referenceInZone)
     {

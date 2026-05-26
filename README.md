@@ -45,7 +45,7 @@ Group chats drift. People schedule things in messages that scroll away in five m
 
 ## It speaks your language
 
-The parser tries your Discord locale first, then falls back through Portuguese, English, Spanish.
+The parser reads your Discord locale and tries that language first (Portuguese or English), falling back to the other if the phrase doesn't match.
 
 | You write... | In | And the bot reads... |
 |---|---|---|
@@ -55,9 +55,6 @@ The parser tries your Discord locale first, then falls back through Portuguese, 
 | `amanhã às 15:00` | PT | tomorrow, 15:00 |
 | `daqui a 30 minutos` | PT | 30 minutes from now |
 | `depois de amanhã` | PT | day after tomorrow, 09:00 |
-| `mañana a las 3 de la tarde` | ES | tomorrow, 15:00 |
-| `en 2 horas` | ES | 2 hours from now |
-| `pasado mañana` | ES | day after tomorrow, 09:00 |
 
 > **Gotcha:** type `15:00` or `15 horas`. Do not write `15h`. The parser sees `15h` as a duration of 15 hours, not as 3 PM.
 
@@ -93,7 +90,7 @@ Three projects, dependencies flow one way: `Discord → Infrastructure → Core`
 |---|---|
 | `Discord.Net 3.19` | Gateway connection and slash commands |
 | `Hangfire.Storage.SQLite` | Schedules survive restarts, no external DB needed |
-| `Microsoft.Recognizers 1.8.13` | Natural language time parsing across PT, EN, ES |
+| `Microsoft.Recognizers 1.8.13` | Natural language time parsing across PT and EN |
 | `Serilog` | Rolling daily log files in `logs/bot-<date>.log` |
 | `WebApplication` (Minimal APIs) | Hosts the Hangfire dashboard at `/hangfire` |
 
@@ -138,7 +135,7 @@ In production, prefer env vars: `Discord__Token`, `Discord__DevGuildId`.
 dotnet test
 ```
 
-10 scenarios on the multilingual parser: PT, EN, ES, locale fallback, unsupported locale, past time, garbage input, empty input. All pass, zero warnings.
+10 scenarios on the multilingual parser: PT, EN, locale fallback, unsupported locale, past time, garbage input, empty input. All pass, zero warnings.
 
 ---
 

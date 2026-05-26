@@ -1,35 +1,27 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SyncMemoBot.Discord.Modules;
 using SyncMemoBot.Infrastructure.Time;
 
 namespace SyncMemoBot.Discord;
 
-public sealed class DiscordClientHost : IHostedService
+public sealed class DiscordClientHost(
+    DiscordSocketClient client,
+    InteractionService interactions,
+    DiscordReadinessSignal readiness,
+    IServiceProvider services,
+    IOptions<DiscordOptions> options,
+    ILogger<DiscordClientHost> logger) : IHostedService
 {
-    private readonly DiscordSocketClient _client;
-    private readonly InteractionService _interactions;
-    private readonly IServiceProvider _services;
-    private readonly IOptions<DiscordOptions> _options;
-    private readonly ILogger<DiscordClientHost> _logger;
-
-    public DiscordClientHost(
-        DiscordSocketClient client,
-        InteractionService interactions,
-        IServiceProvider services,
-        IOptions<DiscordOptions> options,
-        ILogger<DiscordClientHost> logger)
-    {
-        _client = client;
-        _interactions = interactions;
-        _services = services;
-        _options = options;
-        _logger = logger;
-    }
+    private readonly DiscordSocketClient _client = client;
+    private readonly InteractionService _interactions = interactions;
+    private readonly DiscordReadinessSignal _readiness = readiness;
+    private readonly IServiceProvider _services = services;
+    private readonly IOptions<DiscordOptions> _options = options;
+    private readonly ILogger<DiscordClientHost> _logger = logger;
+    private bool _commandsRegistered;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -64,6 +56,10 @@ public sealed class DiscordClientHost : IHostedService
 
     private async Task OnReadyAsync()
     {
+        _readiness.SignalReady();
+
+        if (_commandsRegistered) return;
+
         try
         {
             if (_options.Value.DevGuildId is { } guildId && guildId != 0)
@@ -76,6 +72,8 @@ public sealed class DiscordClientHost : IHostedService
                 await _interactions.RegisterCommandsGloballyAsync(deleteMissing: true);
                 _logger.LogInformation("Registered slash commands globally (may take up to 1 hour to propagate)");
             }
+
+            _commandsRegistered = true;
         }
         catch (Exception ex)
         {
@@ -87,6 +85,7 @@ public sealed class DiscordClientHost : IHostedService
     {
         var context = new SocketInteractionContext(_client, interaction);
         var result = await _interactions.ExecuteCommandAsync(context, _services);
+
         if (!result.IsSuccess)
             _logger.LogWarning("Interaction failed: {Error} — {ErrorReason}", result.Error, result.ErrorReason);
     }

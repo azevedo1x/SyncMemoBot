@@ -4,5 +4,5 @@ public sealed class ReminderOptions
 {
     public const string SectionName = "Reminder";
 
-    public string TimeZone { get; set; } = "America/Sao_Paulo";
+    public string TimeZone { get; init; } = "America/Sao_Paulo";
 }

@@ -14,7 +14,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddSyncMemoBotInfrastructure(
         this IServiceCollection services,
-        string hangfireConnectionString = "Data Source=hangfire.db")
+        string hangfireConnectionString = "hangfire.db")
     {
         services.AddSingleton<IClock, SystemClock>();
         services.AddSingleton<IReminderTimeZone, ConfiguredReminderTimeZone>();

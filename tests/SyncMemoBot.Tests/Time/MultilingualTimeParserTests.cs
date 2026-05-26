@@ -42,16 +42,17 @@ public class MultilingualTimeParserTests
     }
 
     [Fact]
-    public void Parses_relative_spanish_input()
+    public void Spanish_locale_now_uses_english_as_primary()
     {
+        // Spanish support was removed; an es-* locale is treated as English.
         var nowUtc = new DateTimeOffset(2026, 5, 22, 13, 0, 0, TimeSpan.Zero);
         var parser = Build(nowUtc);
 
-        var result = parser.Parse("en 2 horas", "es-ES");
+        var result = parser.Parse("in 2 hours", "es-ES");
 
         var success = result.Should().BeOfType<TimeParseResult.Success>().Subject;
         success.ResolvedUtc.Should().Be(new DateTimeOffset(2026, 5, 22, 15, 0, 0, TimeSpan.Zero));
-        success.UsedCulture.Should().Be(Culture.Spanish);
+        success.UsedCulture.Should().Be(Culture.English);
     }
 
     [Fact]
