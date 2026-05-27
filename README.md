@@ -94,8 +94,6 @@ Three projects, dependencies flow one way: `Discord → Infrastructure → Core`
 | `Serilog` | Rolling daily log files in `logs/bot-<date>.log` |
 | `WebApplication` (Minimal APIs) | Hosts the Hangfire dashboard at `/hangfire` |
 
-Deeper architectural notes (decisions not to reverse, MS Recognizers quirks, conventions) live in [`CLAUDE.md`](CLAUDE.md).
-
 ## Tweak the config
 
 `appsettings.json`:
