@@ -8,6 +8,8 @@ public interface ILocalizedMessages
 
     string PrivateConfirmation(string? userLocale, DateTimeOffset whenUtc);
 
+    string SomeoneConfirmation(string? userLocale, DateTimeOffset whenUtc, ulong targetUserId);
+
     string ChannelConfirmation(string? userLocale, DateTimeOffset whenUtc, ulong channelId);
 
     string MissingChannelPermission(string? userLocale);

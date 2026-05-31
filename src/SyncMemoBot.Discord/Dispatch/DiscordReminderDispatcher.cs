@@ -32,17 +32,26 @@ public sealed class DiscordReminderDispatcher(
         }
     }
 
-    private async Task DispatchDirectAsync(ReminderTarget.Direct target, string message)
+    private Task DispatchDirectAsync(ReminderTarget.Direct target, string message)
     {
-        var user = await _client.GetUserAsync(target.UserId).ConfigureAwait(false);
+        var content = target.UserId == target.CreatedByUserId
+            ? $"⏰ {message}"
+            : $"⏰ <@{target.CreatedByUserId}>: {message}";
+
+        return SendDmAsync(target.UserId, content);
+    }
+
+    private async Task SendDmAsync(ulong userId, string content)
+    {
+        var user = await _client.GetUserAsync(userId).ConfigureAwait(false);
         if (user is null)
         {
-            _logger.LogWarning("Reminder target user {UserId} not found", target.UserId);
-            throw new InvalidOperationException($"Reminder target user {target.UserId} not found");
+            _logger.LogWarning("Reminder target user {UserId} not found", userId);
+            throw new InvalidOperationException($"Reminder target user {userId} not found");
         }
 
         var dm = await user.CreateDMChannelAsync().ConfigureAwait(false);
-        await dm.SendMessageAsync($"⏰ {message}").ConfigureAwait(false);
+        await dm.SendMessageAsync(content).ConfigureAwait(false);
     }
 
     private async Task DispatchToChannelAsync(ReminderTarget.Channel target, string message)

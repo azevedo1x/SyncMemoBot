@@ -16,8 +16,8 @@ public sealed class ReminderCommandsModule(
     private readonly IReminderScheduler _scheduler = scheduler;
     private readonly ILocalizedMessages _l10n = l10n;
 
-    [SlashCommand("remind", "Schedule a private reminder")]
-    public async Task RemindAsync(
+    [SlashCommand("remindme", "Schedule a private reminder")]
+    public async Task RemindMeAsync(
         [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')")] string time,
         [Summary("message", "What to remember")] string message)
     {
@@ -26,10 +26,27 @@ public sealed class ReminderCommandsModule(
             return;
 
         await ScheduleAndConfirmAsync(
-            new ReminderTarget.Direct(Context.User.Id),
+            new ReminderTarget.Direct(Context.User.Id, Context.User.Id),
             message,
             whenUtc,
             _l10n.PrivateConfirmation(locale, whenUtc));
+    }
+
+    [SlashCommand("remindsomeone", "Remind another user via DM")]
+    public async Task RemindSomeoneAsync(
+        [Summary("user", "Who to remind")] IUser user,
+        [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')")] string time,
+        [Summary("message", "What to remind them about")] string message)
+    {
+        var locale = Context.Interaction.UserLocale;
+        if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
+            return;
+
+        await ScheduleAndConfirmAsync(
+            new ReminderTarget.Direct(user.Id, Context.User.Id),
+            message,
+            whenUtc,
+            _l10n.SomeoneConfirmation(locale, whenUtc, user.Id));
     }
 
     [SlashCommand("remindchannel", "Schedule a public reminder in a channel")]

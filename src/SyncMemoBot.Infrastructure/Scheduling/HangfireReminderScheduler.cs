@@ -18,7 +18,7 @@ public sealed class HangfireReminderScheduler(IBackgroundJobClient client) : IRe
     public string Schedule(ScheduledReminder reminder) => reminder.Target switch
     {
         ReminderTarget.Direct d => _client.Schedule<HangfireJobInvoker>(
-            j => j.DispatchDirectAsync(d.UserId, reminder.Message, CancellationToken.None),
+            j => j.DispatchDirectAsync(d.UserId, d.CreatedByUserId, reminder.Message, CancellationToken.None),
             reminder.ScheduledAtUtc),
 
         ReminderTarget.Channel c => _client.Schedule<HangfireJobInvoker>(
