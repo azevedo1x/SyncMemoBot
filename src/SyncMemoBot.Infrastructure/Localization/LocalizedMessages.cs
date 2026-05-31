@@ -31,6 +31,17 @@ public sealed class LocalizedMessages(IReminderTimeZone timeZone) : ILocalizedMe
         };
     }
 
+    public string SomeoneConfirmation(string? userLocale, DateTimeOffset whenUtc, ulong targetUserId)
+    {
+        var language = LanguageDetection.FromLocale(userLocale);
+        var formatted = FormatInZone(whenUtc, language);
+        return language switch
+        {
+            SupportedLanguage.Portuguese => $"Lembrete agendado para <@{targetUserId}> em **{formatted}**. Vou avisar por DM.",
+            _                            => $"Reminder scheduled for <@{targetUserId}> at **{formatted}**. I'll DM them."
+        };
+    }
+
     public string ChannelConfirmation(string? userLocale, DateTimeOffset whenUtc, ulong channelId)
     {
         var language = LanguageDetection.FromLocale(userLocale);

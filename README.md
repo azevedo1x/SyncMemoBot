@@ -21,7 +21,7 @@
 
 You type:
 ```
-/remind  time: in 2 hours  message: pick up the laundry
+/remindme  time: in 2 hours  message: pick up the laundry
 ```
 
 Bot replies (only you can see):
@@ -31,6 +31,13 @@ Bot replies (only you can see):
 Two hours later, in your DMs:
 > **SyncMemo** · today at 17:42
 > Reminder: pick up the laundry
+
+Forgetful friend? Remind *them* instead:
+```
+/remindsomeone  user: @ana  time: friday at 9am  message: submit the form
+```
+
+Friday at 9, Ana gets a DM; **⏰ @you: submit the form**; and knows exactly who to blame.
 
 Want everyone in the group to know? Same thing, but in a channel:
 ```
@@ -72,7 +79,7 @@ dotnet user-secrets set "Discord:Token" "<YOUR_TOKEN>"
 dotnet run
 ```
 
-The bot connects, registers `/remind` and `/remindchannel`, and exposes the Hangfire dashboard at `https://localhost:7204/hangfire`.
+The bot connects, registers `/remindme`, `/remindsomeone`, and `/remindchannel`, and exposes the Hangfire dashboard at `https://localhost:7204/hangfire`.
 
 > No token configured? The app still boots in "dashboard only" mode, so you can poke at the Hangfire UI without a real bot.
 
