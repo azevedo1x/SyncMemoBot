@@ -25,7 +25,7 @@ You type:
 ```
 
 Bot replies (only you can see):
-> **SyncMemo** · only you can see this
+> **SyncMemo** ·
 > Got it. I'll DM you at **17:42 (UTC-3)**.
 
 Two hours later, in your DMs:
