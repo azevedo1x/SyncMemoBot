@@ -59,6 +59,18 @@ public sealed class LocalizedMessages(IReminderTimeZone timeZone) : ILocalizedMe
         _                            => "You don't have permission to send messages in that channel."
     };
 
+    public string UnexpectedError(string? userLocale) => LanguageDetection.FromLocale(userLocale) switch
+    {
+        SupportedLanguage.Portuguese => "Algo deu errado ao agendar seu lembrete. Tente novamente.",
+        _                            => "Something went wrong scheduling your reminder. Please try again."
+    };
+
+    public string RateLimited(string? userLocale) => LanguageDetection.FromLocale(userLocale) switch
+    {
+        SupportedLanguage.Portuguese => "Você está agendando lembretes rápido demais. Espere um pouco e tente de novo.",
+        _                            => "You're scheduling reminders too fast. Wait a bit and try again."
+    };
+
     private string FormatInZone(DateTimeOffset whenUtc, SupportedLanguage language)
     {
         var local = TimeZoneInfo.ConvertTime(whenUtc, _timeZone.Zone);

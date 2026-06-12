@@ -13,4 +13,8 @@ public interface ILocalizedMessages
     string ChannelConfirmation(string? userLocale, DateTimeOffset whenUtc, ulong channelId);
 
     string MissingChannelPermission(string? userLocale);
+
+    string UnexpectedError(string? userLocale);
+
+    string RateLimited(string? userLocale);
 }

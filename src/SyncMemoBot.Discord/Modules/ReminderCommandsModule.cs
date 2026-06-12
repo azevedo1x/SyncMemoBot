@@ -1,6 +1,8 @@
 using Discord;
 using Discord.Interactions;
+using Microsoft.Extensions.Logging;
 using SyncMemoBot.Core.Localization;
+using SyncMemoBot.Core.RateLimiting;
 using SyncMemoBot.Core.Reminders;
 using SyncMemoBot.Core.Scheduling;
 using SyncMemoBot.Core.Time;
@@ -10,76 +12,83 @@ namespace SyncMemoBot.Discord.Modules;
 public sealed class ReminderCommandsModule(
     ITimeParsingService parser,
     IReminderScheduler scheduler,
-    ILocalizedMessages l10n) : InteractionModuleBase<SocketInteractionContext>
+    IReminderRateLimiter rateLimiter,
+    ILocalizedMessages l10n,
+    ILogger<ReminderCommandsModule> logger) : InteractionModuleBase<SocketInteractionContext>
 {
+    private const int MaxMessageLength = 1900;
+    private const int MaxTimeLength = 100;
+
     private readonly ITimeParsingService _parser = parser;
     private readonly IReminderScheduler _scheduler = scheduler;
+    private readonly IReminderRateLimiter _rateLimiter = rateLimiter;
     private readonly ILocalizedMessages _l10n = l10n;
+    private readonly ILogger<ReminderCommandsModule> _logger = logger;
 
     [SlashCommand("remindme", "Schedule a private reminder")]
-    public async Task RemindMeAsync(
-        [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')")] string time,
-        [Summary("message", "What to remember")] string message)
-    {
-        var locale = Context.Interaction.UserLocale;
-        if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
-            return;
+    public Task RemindMeAsync(
+        [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')"), MaxLength(MaxTimeLength)] string time,
+        [Summary("message", "What to remember"), MaxLength(MaxMessageLength)] string message)
+        => GuardAsync(async locale =>
+        {
+            if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
+                return;
 
-        await ScheduleAndConfirmAsync(
-            new ReminderTarget.Direct(Context.User.Id, Context.User.Id),
-            message,
-            whenUtc,
-            _l10n.PrivateConfirmation(locale, whenUtc));
-    }
+            if (!await TryAcquireOrRespondAsync(Context.User.Id, null, locale))
+                return;
+
+            await ScheduleAndConfirmAsync(
+                new ReminderTarget.Direct(Context.User.Id, Context.User.Id),
+                message,
+                whenUtc,
+                _l10n.PrivateConfirmation(locale, whenUtc));
+        });
 
     [SlashCommand("remindsomeone", "Remind another user via DM")]
-    public async Task RemindSomeoneAsync(
+    public Task RemindSomeoneAsync(
         [Summary("user", "Who to remind")] IUser user,
-        [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')")] string time,
-        [Summary("message", "What to remind them about")] string message)
-    {
-        var locale = Context.Interaction.UserLocale;
-        if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
-            return;
+        [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')"), MaxLength(MaxTimeLength)] string time,
+        [Summary("message", "What to remind them about"), MaxLength(MaxMessageLength)] string message)
+        => GuardAsync(async locale =>
+        {
+            if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
+                return;
 
-        await ScheduleAndConfirmAsync(
-            new ReminderTarget.Direct(user.Id, Context.User.Id),
-            message,
-            whenUtc,
-            _l10n.SomeoneConfirmation(locale, whenUtc, user.Id));
-    }
+            if (!await TryAcquireOrRespondAsync(Context.User.Id, user.Id, locale))
+                return;
+
+            await ScheduleAndConfirmAsync(
+                new ReminderTarget.Direct(user.Id, Context.User.Id),
+                message,
+                whenUtc,
+                _l10n.SomeoneConfirmation(locale, whenUtc, user.Id));
+        });
 
     [SlashCommand("remindchannel", "Schedule a public reminder in a channel")]
-    public async Task RemindChannelAsync(
+    public Task RemindChannelAsync(
         [Summary("channel", "Target text channel"), ChannelTypes(ChannelType.Text)] ITextChannel channel,
-        [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')")] string time,
-        [Summary("message", "What to remember")] string message)
-    {
-        var locale = Context.Interaction.UserLocale;
-
-        if (Context.User is not IGuildUser guildUser || !guildUser.GetPermissions(channel).SendMessages)
+        [Summary("time", "When to remind (e.g., 'in 2 hours', 'amanhã às 15:00')"), MaxLength(MaxTimeLength)] string time,
+        [Summary("message", "What to remember"), MaxLength(MaxMessageLength)] string message)
+        => GuardAsync(async locale =>
         {
-            await RespondAsync(_l10n.MissingChannelPermission(locale), ephemeral: true);
-            return;
-        }
+            if (Context.User is not IGuildUser guildUser || !guildUser.GetPermissions(channel).SendMessages)
+            {
+                await RespondAsync(_l10n.MissingChannelPermission(locale), ephemeral: true);
+                return;
+            }
 
-        if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
-            return;
+            if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
+                return;
 
-        await ScheduleAndConfirmAsync(
-            new ReminderTarget.Channel(channel.Id, Context.User.Id),
-            message,
-            whenUtc,
-            _l10n.ChannelConfirmation(locale, whenUtc, channel.Id));
-    }
+            if (!await TryAcquireOrRespondAsync(Context.User.Id, null, locale))
+                return;
 
-    /// <summary>
-    /// Returns the resolved instant, or null after already replying to the user with the
-    /// appropriate error (couldn't parse vs. resolved in the past).
-    /// </summary>
-    /// <param name="time"></param>
-    /// <param name="locale"></param>
-    /// <returns></returns>
+            await ScheduleAndConfirmAsync(
+                new ReminderTarget.Channel(channel.Id, Context.User.Id),
+                message,
+                whenUtc,
+                _l10n.ChannelConfirmation(locale, whenUtc, channel.Id));
+        });
 
     private async Task<DateTimeOffset?> ResolveTimeOrRespondAsync(string time, string? locale)
     {
@@ -98,9 +107,33 @@ public sealed class ReminderCommandsModule(
         }
     }
 
+    private async Task<bool> TryAcquireOrRespondAsync(ulong actorUserId, ulong? targetUserId, string? locale)
+    {
+        if (await _rateLimiter.TryAcquireAsync(actorUserId, targetUserId))
+            return true;
+
+        await RespondAsync(_l10n.RateLimited(locale), ephemeral: true);
+        return false;
+    }
+
     private async Task ScheduleAndConfirmAsync(ReminderTarget target, string message, DateTimeOffset whenUtc, string confirmation)
     {
         _scheduler.Schedule(new ScheduledReminder(Guid.NewGuid(), target, message, whenUtc));
         await RespondAsync(confirmation, ephemeral: true);
+    }
+
+    private async Task GuardAsync(Func<string?, Task> action)
+    {
+        var locale = Context.Interaction.UserLocale;
+        try
+        {
+            await action(locale);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error in reminder command");
+            if (!Context.Interaction.HasResponded)
+                await RespondAsync(_l10n.UnexpectedError(locale), ephemeral: true);
+        }
     }
 }
