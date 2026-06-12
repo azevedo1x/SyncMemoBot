@@ -489,5 +489,13 @@ hangfire.db
 hangfire.db-shm
 hangfire.db-wal
 
+# Rate limit SQLite storage
+reminders.db
+reminders.db-shm
+reminders.db-wal
+
+# Deploy archives
+*.zip
+
 # Claude Related Files
 CLAUDE.md

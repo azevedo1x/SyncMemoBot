@@ -120,6 +120,24 @@ dotnet user-secrets set "Discord:DevGuildId" "<YOUR_GUILD_ID>"
 
 In production, prefer env vars: `Discord__Token`, `Discord__DevGuildId`.
 
+### Rate limiting
+
+Each user is capped at **5 reminders/minute**, **50/day**, and **10/day toward any single other person** (via `/remindsomeone`, so the bot can't be turned into a DM-spam cannon). Tune it under a `RateLimit` section:
+```json
+{
+  "RateLimit": {
+    "BurstLimit": 5,  "BurstWindow": "00:01:00",
+    "DailyLimit": 50, "DailyWindow": "1.00:00:00",
+    "PerTargetDailyLimit": 10
+  }
+}
+```
+Counters live in their own `reminders.db`, separate from the Hangfire store. **In production, point both SQLite files at a persistent path** so schedules and quotas survive deploys:
+```
+ConnectionStrings__Hangfire=/var/lib/syncmemobot/hangfire.db
+ConnectionStrings__RateLimit=/var/lib/syncmemobot/reminders.db
+```
+
 ## What it does not do yet
 
 | Limit | Why |
@@ -127,7 +145,6 @@ In production, prefer env vars: `Discord__Token`, `Discord__DevGuildId`.
 | Single instance only | SQLite Hangfire storage cannot handle concurrent writers |
 | No `/cancel` | Scheduled reminders will fire, no way to undo from Discord (yet) |
 | One-shot only | No recurrence, no cron-like schedules |
-| Dashboard is open | No auth on `/hangfire`. Do not expose to the public internet |
 
 ## Roadmap
 
