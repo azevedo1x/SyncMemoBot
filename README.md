@@ -138,14 +138,6 @@ ConnectionStrings__Hangfire=/var/lib/syncmemobot/hangfire.db
 ConnectionStrings__RateLimit=/var/lib/syncmemobot/reminders.db
 ```
 
-## What it does not do yet
-
-| Limit | Why |
-|---|---|
-| Single instance only | SQLite Hangfire storage cannot handle concurrent writers |
-| No `/cancel` | Scheduled reminders will fire, no way to undo from Discord (yet) |
-| One-shot only | No recurrence, no cron-like schedules |
-
 ## Roadmap
 
 `/cancel <id>` · recurring reminders · snooze · edit existing reminder · share with another user · reminder templates · multi-instance (requires swapping Hangfire storage) · authenticated dashboard.
