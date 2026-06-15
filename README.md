@@ -138,10 +138,6 @@ ConnectionStrings__Hangfire=/var/lib/syncmemobot/hangfire.db
 ConnectionStrings__RateLimit=/var/lib/syncmemobot/reminders.db
 ```
 
-## Roadmap
-
-`/cancel <id>` · recurring reminders · snooze · edit existing reminder · share with another user · reminder templates · multi-instance (requires swapping Hangfire storage) · authenticated dashboard.
-
 ## Tests
 
 ```powershell
