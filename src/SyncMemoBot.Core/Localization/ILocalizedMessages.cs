@@ -1,3 +1,5 @@
+using SyncMemoBot.Core.Dispatch;
+
 namespace SyncMemoBot.Core.Localization;
 
 public interface ILocalizedMessages
@@ -14,7 +16,15 @@ public interface ILocalizedMessages
 
     string MissingChannelPermission(string? userLocale);
 
+    string BotMissingChannelPermission(string? userLocale);
+
     string UnexpectedError(string? userLocale);
 
     string RateLimited(string? userLocale);
+
+    string TargetUnreachable(string? userLocale);
+
+    string ChannelNotFound(string? userLocale);
+
+    string DeliveryFailure(DeliveryFailureReason reason, string reminderMessage, string? userLocale);
 }

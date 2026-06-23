@@ -4,4 +4,5 @@ public sealed record ScheduledReminder(
     Guid Id,
     ReminderTarget Target,
     string Message,
-    DateTimeOffset ScheduledAtUtc);
+    DateTimeOffset ScheduledAtUtc,
+    string? Locale);
