@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="assets/syncmemo-avatar-compressed.jpeg" alt="SyncMemo" width="10%"/>
+  <img src="assets/syncmemo-avatar-compressed.jpeg" alt="SyncMemo" width="15%"/>
 </p>
 
-<h1 align="center">SyncMemoBot</h1>
+<h1 align="center">🇸🇾🇳🇨🇲🇪🇲🇴</h1>
 
 <p align="center">
   <img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet" alt=".NET 8"/>
