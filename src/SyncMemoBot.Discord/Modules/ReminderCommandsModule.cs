@@ -127,7 +127,6 @@ public sealed class ReminderCommandsModule(
         var locale = Context.Interaction.UserLocale;
         try
         {
-            await DeferAsync(ephemeral: true);
             await action(locale);
         }
         catch (Exception ex)

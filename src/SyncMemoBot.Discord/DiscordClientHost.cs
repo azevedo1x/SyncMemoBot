@@ -73,6 +73,8 @@ public sealed class DiscordClientHost(
                 _logger.LogInformation("Registered slash commands globally (may take up to 1 hour to propagate)");
             }
 
+            await WarmUpRestPipelineAsync();
+
             _commandsRegistered = true;
         }
         catch (Exception ex)
@@ -81,13 +83,40 @@ public sealed class DiscordClientHost(
         }
     }
 
+    private async Task WarmUpRestPipelineAsync()
+    {
+        try
+        {
+            await _client.Rest.GetUserAsync(_client.CurrentUser.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "REST pipeline warm-up failed");
+        }
+    }
+
     private async Task OnInteractionCreatedAsync(SocketInteraction interaction)
     {
+        if (interaction.Type == InteractionType.ApplicationCommand)
+            await DeferEarlyAsync(interaction);
+
         var context = new SocketInteractionContext(_client, interaction);
         var result = await _interactions.ExecuteCommandAsync(context, _services);
 
         if (!result.IsSuccess)
             _logger.LogWarning("Interaction failed: {Error} — {ErrorReason}", result.Error, result.ErrorReason);
+    }
+
+    private async Task DeferEarlyAsync(SocketInteraction interaction)
+    {
+        try
+        {
+            await interaction.DeferAsync(ephemeral: true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to defer interaction early");
+        }
     }
 
     private Task ForwardLog(LogMessage msg)
