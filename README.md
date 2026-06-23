@@ -1,12 +1,8 @@
 <p align="center">
-  <img src="assets/syncmemo-avatar-compressed.jpeg" alt="SyncMemo" width="25%"/>
+  <img src="assets/syncmemo-avatar-compressed.jpeg" alt="SyncMemo" width="10%"/>
 </p>
 
 <h1 align="center">SyncMemoBot</h1>
-
-<p align="center">
-  <em>Set it. Forget it. The bot remembers.</em>
-</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet" alt=".NET 8"/>
