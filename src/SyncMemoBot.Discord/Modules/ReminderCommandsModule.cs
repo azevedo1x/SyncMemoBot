@@ -9,6 +9,7 @@ using SyncMemoBot.Core.Time;
 
 namespace SyncMemoBot.Discord.Modules;
 
+[CommandContextType(InteractionContextType.Guild)]
 public sealed class ReminderCommandsModule(
     ITimeParsingService parser,
     IReminderScheduler scheduler,
@@ -41,7 +42,8 @@ public sealed class ReminderCommandsModule(
                 new ReminderTarget.Direct(Context.User.Id, Context.User.Id),
                 message,
                 whenUtc,
-                _l10n.PrivateConfirmation(locale, whenUtc));
+                _l10n.PrivateConfirmation(locale, whenUtc),
+                locale);
         });
 
     [SlashCommand("remindsomeone", "Remind another user via DM")]
@@ -61,7 +63,8 @@ public sealed class ReminderCommandsModule(
                 new ReminderTarget.Direct(user.Id, Context.User.Id),
                 message,
                 whenUtc,
-                _l10n.SomeoneConfirmation(locale, whenUtc, user.Id));
+                _l10n.SomeoneConfirmation(locale, whenUtc, user.Id),
+                locale);
         });
 
     [SlashCommand("remindchannel", "Schedule a public reminder in a channel")]
@@ -77,6 +80,12 @@ public sealed class ReminderCommandsModule(
                 return;
             }
 
+            if (Context.Guild?.CurrentUser is not { } bot || !bot.GetPermissions(channel).SendMessages)
+            {
+                await FollowupAsync(_l10n.BotMissingChannelPermission(locale), ephemeral: true);
+                return;
+            }
+
             if (await ResolveTimeOrRespondAsync(time, locale) is not { } whenUtc)
                 return;
 
@@ -87,7 +96,8 @@ public sealed class ReminderCommandsModule(
                 new ReminderTarget.Channel(channel.Id, Context.User.Id),
                 message,
                 whenUtc,
-                _l10n.ChannelConfirmation(locale, whenUtc, channel.Id));
+                _l10n.ChannelConfirmation(locale, whenUtc, channel.Id),
+                locale);
         });
 
     private async Task<DateTimeOffset?> ResolveTimeOrRespondAsync(string time, string? locale)
@@ -116,9 +126,9 @@ public sealed class ReminderCommandsModule(
         return false;
     }
 
-    private async Task ScheduleAndConfirmAsync(ReminderTarget target, string message, DateTimeOffset whenUtc, string confirmation)
+    private async Task ScheduleAndConfirmAsync(ReminderTarget target, string message, DateTimeOffset whenUtc, string confirmation, string? locale)
     {
-        _scheduler.Schedule(new ScheduledReminder(Guid.NewGuid(), target, message, whenUtc));
+        _scheduler.Schedule(new ScheduledReminder(Guid.NewGuid(), target, message, whenUtc, locale));
         await FollowupAsync(confirmation, ephemeral: true);
     }
 

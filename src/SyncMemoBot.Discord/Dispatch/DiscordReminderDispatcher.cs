@@ -1,4 +1,5 @@
 using Discord;
+using Discord.Net;
 using Discord.WebSocket;
 using SyncMemoBot.Core.Dispatch;
 using SyncMemoBot.Core.Reminders;
@@ -20,15 +21,20 @@ public sealed class DiscordReminderDispatcher(
     {
         await _readiness.WaitUntilReadyAsync(ReadyTimeout, ct).ConfigureAwait(false);
 
-        switch (target)
+        try
         {
-            case ReminderTarget.Direct d:
-                await DispatchDirectAsync(d, message).ConfigureAwait(false);
-                break;
+            var send = target switch
+            {
+                ReminderTarget.Direct d  => DispatchDirectAsync(d, message),
+                ReminderTarget.Channel c => DispatchToChannelAsync(c, message),
+                _ => throw new InvalidOperationException($"Unknown ReminderTarget: {target.GetType().Name}")
+            };
 
-            case ReminderTarget.Channel c:
-                await DispatchToChannelAsync(c, message).ConfigureAwait(false);
-                break;
+            await send.ConfigureAwait(false);
+        }
+        catch (HttpException ex)
+        {
+            throw new ReminderDeliveryException(MapReason(ex), ex);
         }
     }
 
@@ -47,7 +53,7 @@ public sealed class DiscordReminderDispatcher(
         if (user is null)
         {
             _logger.LogWarning("Reminder target user {UserId} not found", userId);
-            throw new InvalidOperationException($"Reminder target user {userId} not found");
+            throw new ReminderDeliveryException(DeliveryFailureReason.TargetUnreachable);
         }
 
         var dm = await user.CreateDMChannelAsync().ConfigureAwait(false);
@@ -59,9 +65,19 @@ public sealed class DiscordReminderDispatcher(
         if (_client.GetChannel(target.ChannelId) is not ITextChannel channel)
         {
             _logger.LogWarning("Reminder target channel {ChannelId} not found", target.ChannelId);
-            throw new InvalidOperationException($"Reminder target channel {target.ChannelId} not found");
+            throw new ReminderDeliveryException(DeliveryFailureReason.ChannelNotFound);
         }
 
         await channel.SendMessageAsync($"⏰ <@{target.CreatedByUserId}> {message}").ConfigureAwait(false);
     }
+
+    private static DeliveryFailureReason MapReason(HttpException ex) => (int?)ex.DiscordCode switch
+    {
+        50007 => DeliveryFailureReason.TargetUnreachable,
+        50278 => DeliveryFailureReason.TargetUnreachable,
+        50013 => DeliveryFailureReason.MissingChannelPermission,
+        50001 => DeliveryFailureReason.MissingChannelPermission,
+        10003 => DeliveryFailureReason.ChannelNotFound,
+        _ => DeliveryFailureReason.Unknown
+    };
 }
