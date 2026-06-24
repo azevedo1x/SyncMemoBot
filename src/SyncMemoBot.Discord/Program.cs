@@ -38,7 +38,9 @@ builder.Services.AddSingleton(new DiscordSocketConfig
 });
 builder.Services.AddSingleton<DiscordSocketClient>();
 builder.Services.AddSingleton(sp =>
-    new InteractionService(sp.GetRequiredService<DiscordSocketClient>()));
+    new InteractionService(
+        sp.GetRequiredService<DiscordSocketClient>(),
+        new InteractionServiceConfig { DefaultRunMode = RunMode.Sync }));
 builder.Services.AddSingleton<DiscordReadinessSignal>();
 builder.Services.AddSingleton<IReminderDispatcher, DiscordReminderDispatcher>();
 builder.Services.AddSingleton<IReminderFailureNotifier, DiscordReminderFailureNotifier>();

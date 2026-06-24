@@ -37,7 +37,7 @@ public sealed class DiscordClientHost(
         _client.Log += ForwardLog;
         _interactions.Log += ForwardLog;
         _client.Ready += OnReadyAsync;
-        _client.InteractionCreated += OnInteractionCreatedAsync;
+        _client.InteractionCreated += OnInteractionCreated;
 
         await _interactions.AddModulesAsync(typeof(ReminderCommandsModule).Assembly, _services);
 
@@ -95,16 +95,29 @@ public sealed class DiscordClientHost(
         }
     }
 
-    private async Task OnInteractionCreatedAsync(SocketInteraction interaction)
+    private Task OnInteractionCreated(SocketInteraction interaction)
     {
-        if (interaction.Type == InteractionType.ApplicationCommand)
-            await DeferEarlyAsync(interaction);
+        _ = Task.Run(() => HandleInteractionAsync(interaction));
+        return Task.CompletedTask;
+    }
 
-        var context = new SocketInteractionContext(_client, interaction);
-        var result = await _interactions.ExecuteCommandAsync(context, _services);
+    private async Task HandleInteractionAsync(SocketInteraction interaction)
+    {
+        try
+        {
+            if (interaction.Type == InteractionType.ApplicationCommand)
+                await DeferEarlyAsync(interaction);
 
-        if (!result.IsSuccess)
-            _logger.LogWarning("Interaction failed: {Error} — {ErrorReason}", result.Error, result.ErrorReason);
+            var context = new SocketInteractionContext(_client, interaction);
+            var result = await _interactions.ExecuteCommandAsync(context, _services);
+
+            if (!result.IsSuccess)
+                _logger.LogWarning("Interaction failed: {Error} — {ErrorReason}", result.Error, result.ErrorReason);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error handling interaction");
+        }
     }
 
     private async Task DeferEarlyAsync(SocketInteraction interaction)
