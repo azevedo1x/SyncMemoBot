@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/syncmemo-avatar-compressed.jpeg" alt="SyncMemo" width="15%"/>
+  <img src="assets/syncmemo-avatar-compressed.jpeg" alt="SyncMemo" width="25%"/>
 </p>
 
 <h1 align="center">🇸🇾🇳🇨🇲🇪🇲🇴</h1>
