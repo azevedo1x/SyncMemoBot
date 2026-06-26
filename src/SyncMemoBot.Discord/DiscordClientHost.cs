@@ -73,25 +73,11 @@ public sealed class DiscordClientHost(
                 _logger.LogInformation("Registered slash commands globally (may take up to 1 hour to propagate)");
             }
 
-            await WarmUpRestPipelineAsync();
-
             _commandsRegistered = true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to register slash commands");
-        }
-    }
-
-    private async Task WarmUpRestPipelineAsync()
-    {
-        try
-        {
-            await _client.Rest.GetUserAsync(_client.CurrentUser.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "REST pipeline warm-up failed");
         }
     }
 
