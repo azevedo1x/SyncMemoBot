@@ -45,6 +45,7 @@ builder.Services.AddSingleton<DiscordReadinessSignal>();
 builder.Services.AddSingleton<IReminderDispatcher, DiscordReminderDispatcher>();
 builder.Services.AddSingleton<IReminderFailureNotifier, DiscordReminderFailureNotifier>();
 builder.Services.AddHostedService<DiscordClientHost>();
+builder.Services.AddHostedService<DiscordKeepWarmService>();
 
 var app = builder.Build();
 
